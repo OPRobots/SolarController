@@ -15,8 +15,8 @@
 #include <SoftwareSerial.h>
 
 // CONFIGURACIÓN
-#define SERVO_CENTRO 1160 // Barco: 1160  || Coche: 1500
-#define SERVO_AMPLITUD 250
+#define SERVO_CENTRO 1160 // Barco: 1160  || Coche: 1625
+#define SERVO_AMPLITUD 250 // Barco: 250 || Coche 300
 
 #define TENSION_ANALOG_MINIMA 0
 #define TENSION_ANALOG_MAXIMA 932
@@ -278,29 +278,29 @@ int calcular_mppt(int velocidad_limite) {
     W = (V_media / 100.0f) * (A_media / 100.0f);
 
 
-    Serial.print(A_media);
-    Serial.print("\t");
-    Serial.print(V_media);
-    Serial.print("\t");
-    Serial.print(W);
+    // Serial.print(A_media);
+    // Serial.print("\t");
+    // Serial.print(V_media);
+    // Serial.print("\t");
+    // Serial.print(W);
     // ultimoMPPT = millis();
     // return velocidad_limite;
 
     if (W > W_anterior) {
       if (V_media > V_anterior) {
-        velocidad_mppt += DELTA_VELOCIDAD;
-      } else {
         velocidad_mppt -= DELTA_VELOCIDAD;
+      } else {
+        velocidad_mppt += DELTA_VELOCIDAD;
       }
     } else {
       if (V_media > V_anterior) {
-        velocidad_mppt -= DELTA_VELOCIDAD;
-      } else {
         velocidad_mppt += DELTA_VELOCIDAD;
+      } else {
+        velocidad_mppt -= DELTA_VELOCIDAD;
       }
     }
-    Serial.print("\t");
-    Serial.println(velocidad_mppt);
+    // Serial.print("\t");
+    // Serial.println(velocidad_mppt);
 
     velocidad_mppt = constrain(velocidad_mppt, 75, 500);
     V_anterior = V_media;
