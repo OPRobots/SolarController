@@ -15,8 +15,8 @@
 #include <SoftwareSerial.h>
 
 // CONFIGURACIÓN
-#define SERVO_CENTRO 1160 // Barco: 1160  || Coche: 1625
-#define SERVO_AMPLITUD 250 // Barco: 250 || Coche 300
+#define SERVO_CENTRO 1625  // Barco: 1160  || Coche: 1625
+#define SERVO_AMPLITUD 300 // Barco: 250 || Coche 300
 
 #define TENSION_ANALOG_MINIMA 0
 #define TENSION_ANALOG_MAXIMA 932
@@ -62,6 +62,12 @@ int V_anterior = 0;
 int A[NUMERO_MEDIDAS];
 int A_media = 0;
 long millisLeerDatos = 0;
+
+#define NUMERO_MEDIDAS_VELOCIDAD_LIMITE 20
+#define TIEMPO_VELOCIDAD_LIMITE 20
+bool lectura_inicial_velocidad_limite = true;
+int velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE];
+long millisLeerVelocidadLimite = 0;
 
 // VARIABLES IBUS
 #define IBUS_RAXIS_X 0
@@ -127,7 +133,7 @@ void loop() {
     return;
   }
 
-  int velocidad_limite = map(arr_ibus[IBUS_RAXIS_Y], 0, 100, 1500, 2000) - map(constrain(arr_ibus[IBUS_LAXIS_Y], 0, 50), 0, 50, 500, 0);
+  int velocidad_limite = calcular_media_velocidad_limite();
   int giro = map(arr_ibus[IBUS_LAXIS_X], 0, 100, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
 
   // Añade una DEADZONE de 50 a la velocidad_limite
@@ -264,7 +270,21 @@ void leer_datos() {
       A[NUMERO_MEDIDAS - 1] = leer_consumo();
     }
     millisLeerDatos = millis();
+  }
 
+  if (millis() - millisLeerVelocidadLimite > TIEMPO_VELOCIDAD_LIMITE || lectura_inicial_velocidad_limite) {
+    if (lectura_inicial_velocidad_limite) {
+      for (int medida = 0; medida < NUMERO_MEDIDAS_VELOCIDAD_LIMITE; medida++) {
+        velocidad_limite[medida] = map(arr_ibus[IBUS_RAXIS_Y], 0, 100, 1500, 2000) - map(constrain(arr_ibus[IBUS_LAXIS_Y], 0, 50), 0, 50, 500, 0);
+      }
+      lectura_inicial_velocidad_limite = false;
+    } else {
+      for (int medida = 0; medida < NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1; medida++) {
+        velocidad_limite[medida] = velocidad_limite[medida + 1];
+      }
+      velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1] = map(arr_ibus[IBUS_RAXIS_Y], 0, 100, 1500, 2000) - map(constrain(arr_ibus[IBUS_LAXIS_Y], 0, 50), 0, 50, 500, 0);
+    }
+    millisLeerVelocidadLimite = millis();
   }
 }
 
@@ -276,7 +296,6 @@ int calcular_mppt(int velocidad_limite) {
     A_media = calcular_media_A();
     V_media = calcular_media_V();
     W = (V_media / 100.0f) * (A_media / 100.0f);
-
 
     // Serial.print(A_media);
     // Serial.print("\t");
@@ -343,6 +362,14 @@ int calcular_media_A() {
     suma_A += A[medida];
   }
   return suma_A / NUMERO_MEDIDAS;
+}
+
+int calcular_media_velocidad_limite() {
+  long suma_velocidad_limite = 0;
+  for (int medida = 0; medida < NUMERO_MEDIDAS_VELOCIDAD_LIMITE; medida++) {
+    suma_velocidad_limite += velocidad_limite[medida];
+  }
+  return suma_velocidad_limite / NUMERO_MEDIDAS_VELOCIDAD_LIMITE;
 }
 
 void encoder_a() { ticks_encoder_a++; }
