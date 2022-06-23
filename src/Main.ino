@@ -15,8 +15,8 @@
 #include <SoftwareSerial.h>
 
 // CONFIGURACIÓN
-#define SERVO_CENTRO 1625  // Barco: 1160  || Coche: 1625
-#define SERVO_AMPLITUD 300 // Barco: 250 || Coche 300
+#define SERVO_CENTRO 1160  // Barco: 1160  || Coche: 1625
+#define SERVO_AMPLITUD 275 // Barco: 275 || Coche 300
 
 #define TENSION_ANALOG_MINIMA 0
 #define TENSION_ANALOG_MAXIMA 932
@@ -165,23 +165,23 @@ void loop() {
   motorServo.writeMicroseconds(giro);
   // return;
 
-  // if (millis() - millisPrint >= 100) {
+  if (millis() - millisPrint >= 100) {
 
-  //   Serial.print(" V: ");
-  //   Serial.print(leer_tension());
-  //   Serial.print("\t - \t");
+    Serial.print(" V: ");
+    Serial.print(leer_tension());
+    Serial.print("\t - \t");
   //   // Serial.print(analogRead(PIN_VOLTIMETRO));
   //   // Serial.print(" - ");
-  //   Serial.print(calcular_media_V());
-  //   Serial.print("\t A: ");
-  //   Serial.print(leer_consumo());
-  //   Serial.print("\t - \t");
+    Serial.print(calcular_media_V());
+    Serial.print("\t A: ");
+    Serial.print(leer_consumo());
+    Serial.print("\t - \t");
   //   // Serial.print(analogRead(PIN_AMPERIMETRO));
   //   // Serial.print(" - ");
   //   // Serial.print(0);
   //   // Serial.print(" ");
-  //   Serial.print(calcular_media_A());
-  //   // Serial.print(" ");
+    Serial.print(calcular_media_A());
+    Serial.print(" ");
   //   // Serial.print(5000);
   //   // Serial.print("\t");
   //   // Serial.print("\n");
@@ -198,9 +198,9 @@ void loop() {
   //   Serial.print(velocidad);
   //   Serial.print("\t G: ");
   //   Serial.print(giro);
-  //   Serial.print("\n");
-  //   millisPrint = millis();
-  // }
+    Serial.print("\n");
+    millisPrint = millis();
+  }
 }
 
 void leer_IBus() {
