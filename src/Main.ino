@@ -2,21 +2,23 @@
  * @file Main.ino
  * @author Álex Santos (@robotaleh)
  * @brief
- * @version 0.1
- * @date 2021-03-24
+ * @version 0.2
+ * @date 2023-05-16
  *
- * @copyright Copyright (c) 2021
+ * @copyright Copyright (c) 2023
  *
  */
 
 // INCLUDES
-#include "FlySkyIBus.h"
+#include <FlySkyIBus.h>
 #include <Servo.h>
 #include <SoftwareSerial.h>
 
 // CONFIGURACIÓN
 #define SERVO_CENTRO 1160  // Barco: 1160  || Coche: 1625
 #define SERVO_AMPLITUD 275 // Barco: 275 || Coche 300
+#define CALIBRACION_V 2366 // 23.66v es la tensión máxima para 1023 (5v)
+#define CALIBRACION_A 25000
 
 #define TENSION_ANALOG_MINIMA 0
 #define TENSION_ANALOG_MAXIMA 932
@@ -338,12 +340,12 @@ int calcular_mppt(int velocidad_limite) {
 }
 
 int leer_tension() {
-  int v = map(analogRead(PIN_VOLTIMETRO), 0, 1024, 0, 2366); // 23.66v es la tensión máxima para 1023 (5v)
+  int v = map(analogRead(PIN_VOLTIMETRO), 0, 1024, 0, CALIBRACION_V);
   return v > 0 ? v : 0;
 }
 
 int leer_consumo() {
-  int a = constrain(map(analogRead(PIN_AMPERIMETRO), 512, 1023, 0, 25000), 0, 30000);
+  int a = constrain(map(analogRead(PIN_AMPERIMETRO), 512, 1023, 0, CALIBRACION_A), 0, CALIBRACION_A);
   return a > 0 ? a : 0;
   // return ((analogRead(PIN_AMPERIMETRO) * (20000/1023))-20000)/100;
 }
