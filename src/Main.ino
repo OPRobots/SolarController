@@ -10,7 +10,6 @@
  */
 
 // INCLUDES
-#include <FlySkyIBus.h>
 #include <Servo.h>
 #include <SoftwareSerial.h>
 
@@ -27,11 +26,11 @@
 #define CONSUMO_BARCO_ANALOG_MAXIMA 1023
 
 // PINOUT
-#define PIN_MANDO_IBUS_RX 5
-#define PIN_MANDO_IBUS_TX 4
+#define PIN_LAXIS_Y 2
+#define PIN_RAXIS_X 3
 
-#define PIN_ENCODER_A 2
-#define PIN_ENCODER_B 3
+// #define PIN_ENCODER_A 2
+// #define PIN_ENCODER_B 3
 
 #define PIN_SERVO_1 9
 #define PIN_SERVO_2 10
@@ -47,7 +46,6 @@
 // VARIABLES
 Servo motorBrushless;
 Servo motorServo;
-SoftwareSerial IBusSerial(PIN_MANDO_IBUS_RX, PIN_MANDO_IBUS_TX);
 
 // VARIABLES ENCODERS
 volatile unsigned long ticks_encoder_a = 0;
@@ -71,17 +69,14 @@ bool lectura_inicial_velocidad_limite = true;
 int velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE];
 long millisLeerVelocidadLimite = 0;
 
-// VARIABLES IBUS
-#define IBUS_RAXIS_X 0
-#define IBUS_LAXIS_Y 1
-#define IBUS_RAXIS_Y 2
-#define IBUS_LAXIS_X 3
-#define IBUS_SWITCH2 4
-#define IBUS_SWITCH3 5
-int arr_ibus[6];
+// VARIABLES PULSEIN
+#define PULSEIN_LAXIS_Y 0
+#define PULSEIN_RAXIS_X 1
+int arr_pulseIn[2];
 
 // VARIABLES MPPT
 #define DELTA_VELOCIDAD 30
+bool usa_mppt = false;
 float W = 0;
 float W_anterior = 0;
 int velocidad = 0;
@@ -92,14 +87,16 @@ void setup() {
 
   // Iniciar Serial
   Serial.begin(115200);
-  // IBusSerial.begin(115200);
-  IBus.begin(Serial);
 
-  // Iniciar Encoders
-  pinMode(PIN_ENCODER_A, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(PIN_ENCODER_A), encoder_a, CHANGE);
-  pinMode(PIN_ENCODER_B, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(PIN_ENCODER_B), encoder_b, CHANGE);
+  // Pines de entrada
+  pinMode(PIN_LAXIS_Y, INPUT);
+  pinMode(PIN_RAXIS_X, INPUT);
+
+  // // Iniciar Encoders
+  // pinMode(PIN_ENCODER_A, INPUT_PULLUP);
+  // attachInterrupt(digitalPinToInterrupt(PIN_ENCODER_A), encoder_a, CHANGE);
+  // pinMode(PIN_ENCODER_B, INPUT_PULLUP);
+  // attachInterrupt(digitalPinToInterrupt(PIN_ENCODER_B), encoder_b, CHANGE);
 
   delay(3000); // Para forzar desconexión del esc al reiniciar
 
@@ -123,20 +120,11 @@ void setup() {
 long millisPrint = 0;
 
 void loop() {
-  IBus.loop();
-
-  leer_IBus();
+  leer_pulseIn();
   leer_datos();
 
-  // Se reciben -1 en el IBus hasta que el mando se conecte al menos una vez
-  if (arr_ibus[IBUS_SWITCH2] == -1) {
-    motorBrushless.writeMicroseconds(1500);
-    motorServo.writeMicroseconds(SERVO_CENTRO);
-    return;
-  }
-
   int velocidad_limite = calcular_media_velocidad_limite();
-  int giro = map(arr_ibus[IBUS_LAXIS_X], 0, 100, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
+  int giro = map(arr_pulseIn[PULSEIN_RAXIS_X], 0, 1000, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
 
   // Añade una DEADZONE de 50 a la velocidad_limite
   if (abs(1000 - velocidad_limite) < 50) {
@@ -147,7 +135,7 @@ void loop() {
     velocidad_limite = 2000;
   }
 
-  if (arr_ibus[IBUS_SWITCH2] == 1 && abs(1500 - velocidad_limite) > 50) {
+  if (usa_mppt && abs(1500 - velocidad_limite) > 50) {
     velocidad = calcular_mppt(velocidad_limite);
   } else {
     velocidad_mppt = 0;
@@ -172,87 +160,42 @@ void loop() {
     Serial.print(" V: ");
     Serial.print(leer_tension());
     Serial.print("\t - \t");
-  //   // Serial.print(analogRead(PIN_VOLTIMETRO));
-  //   // Serial.print(" - ");
+    //   // Serial.print(analogRead(PIN_VOLTIMETRO));
+    //   // Serial.print(" - ");
     Serial.print(calcular_media_V());
     Serial.print("\t A: ");
     Serial.print(leer_consumo());
     Serial.print("\t - \t");
-  //   // Serial.print(analogRead(PIN_AMPERIMETRO));
-  //   // Serial.print(" - ");
-  //   // Serial.print(0);
-  //   // Serial.print(" ");
+    //   // Serial.print(analogRead(PIN_AMPERIMETRO));
+    //   // Serial.print(" - ");
+    //   // Serial.print(0);
+    //   // Serial.print(" ");
     Serial.print(calcular_media_A());
     Serial.print(" ");
-  //   // Serial.print(5000);
-  //   // Serial.print("\t");
-  //   // Serial.print("\n");
+    //   // Serial.print(5000);
+    //   // Serial.print("\t");
+    //   // Serial.print("\n");
 
-  //   // Serial.print(" MPPT: ");
-  //   // Serial.print(arr_ibus[IBUS_SWITCH2]);
+    //   // Serial.print(" MPPT: ");
+    //   // Serial.print(arr_ibus[IBUS_SWITCH2]);
 
-  //   Serial.print("\t V LIM: ");
-  //   Serial.print(velocidad_limite);
+    //   Serial.print("\t V LIM: ");
+    //   Serial.print(velocidad_limite);
 
-  //   Serial.print("\t V MPPT: ");
-  //   Serial.print(velocidad_mppt);
-  //   Serial.print("\t V: ");
-  //   Serial.print(velocidad);
-  //   Serial.print("\t G: ");
-  //   Serial.print(giro);
+    Serial.print("\t V MPPT: ");
+    Serial.print(velocidad_mppt);
+    Serial.print("\t V: ");
+    Serial.print(velocidad);
+    Serial.print("\t G: ");
+    Serial.print(giro);
     Serial.print("\n");
     millisPrint = millis();
   }
 }
 
-void leer_IBus() {
-  for (int channel = 0; channel < 6; channel++) {
-    int val = IBus.readChannel(channel);
-
-    switch (channel) {
-      case IBUS_LAXIS_Y:
-        val = map(val, 1000, 2000, 0, 100);
-        if (abs(100 - val) < 5) {
-          val = 100;
-        } else if (abs(50 - val) < 10) {
-          val = 50;
-        } else if (abs(val) < 5) {
-          val = 0;
-        }
-        break;
-      case IBUS_RAXIS_Y:
-        val = map(val, 1000, 2000, 0, 100);
-        if (abs(100 - val) < 5) {
-          val = 100;
-        } else if (abs(val) < 5) {
-          val = 0;
-        }
-        break;
-      case IBUS_SWITCH2:
-        val = map(val, 1000, 2000, 0, 1);
-        break;
-      case IBUS_SWITCH3:
-        val = map(val, 1000, 2000, 0, 2);
-        break;
-      default:
-        val = map(val, 1000, 2000, 0, 100);
-        if (abs(100 - val) < 5) {
-          val = 100;
-        } else if (abs(50 - val) < 5) {
-          val = 50;
-        } else if (abs(val) < 5) {
-          val = 0;
-        }
-        break;
-    }
-    arr_ibus[channel] = val;
-
-    // Serial.print(" ");
-    // Serial.print(arr_ibus[channel]);
-    // if (channel == 5) {
-    //   Serial.print("\n");
-    // }
-  }
+void leer_pulseIn() {
+  arr_pulseIn[PULSEIN_LAXIS_Y] = pulseIn(PIN_LAXIS_Y, HIGH) - 990;
+  arr_pulseIn[PULSEIN_RAXIS_X] = pulseIn(PIN_RAXIS_X, HIGH) - 990;
 }
 
 void leer_datos() {
@@ -277,14 +220,14 @@ void leer_datos() {
   if (millis() - millisLeerVelocidadLimite > TIEMPO_VELOCIDAD_LIMITE || lectura_inicial_velocidad_limite) {
     if (lectura_inicial_velocidad_limite) {
       for (int medida = 0; medida < NUMERO_MEDIDAS_VELOCIDAD_LIMITE; medida++) {
-        velocidad_limite[medida] = map(arr_ibus[IBUS_RAXIS_Y], 0, 100, 1500, 2000) - map(constrain(arr_ibus[IBUS_LAXIS_Y], 0, 50), 0, 50, 500, 0);
+        velocidad_limite[medida] = map(arr_pulseIn[PULSEIN_LAXIS_Y], 0, 1000, 1000, 2000);
       }
       lectura_inicial_velocidad_limite = false;
     } else {
       for (int medida = 0; medida < NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1; medida++) {
         velocidad_limite[medida] = velocidad_limite[medida + 1];
       }
-      velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1] = map(arr_ibus[IBUS_RAXIS_Y], 0, 100, 1500, 2000) - map(constrain(arr_ibus[IBUS_LAXIS_Y], 0, 50), 0, 50, 500, 0);
+      velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1] = map(arr_pulseIn[PULSEIN_LAXIS_Y], 0, 1000, 1000, 2000);
     }
     millisLeerVelocidadLimite = millis();
   }
@@ -374,6 +317,6 @@ int calcular_media_velocidad_limite() {
   return suma_velocidad_limite / NUMERO_MEDIDAS_VELOCIDAD_LIMITE;
 }
 
-void encoder_a() { ticks_encoder_a++; }
+// void encoder_a() { ticks_encoder_a++; }
 
-void encoder_b() { ticks_encoder_b++; }
+// void encoder_b() { ticks_encoder_b++; }
