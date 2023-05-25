@@ -10,6 +10,7 @@
  */
 
 // INCLUDES
+#include <Arduino.h>
 #include <Servo.h>
 #include <SoftwareSerial.h>
 
@@ -26,8 +27,8 @@
 #define CONSUMO_BARCO_ANALOG_MAXIMA 1023
 
 // PINOUT
-#define PIN_LAXIS_Y 2
-#define PIN_RAXIS_X 3
+#define PIN_RAXIS_X 2
+#define PIN_LAXIS_Y 3
 
 // #define PIN_ENCODER_A 2
 // #define PIN_ENCODER_B 3
@@ -124,13 +125,13 @@ void loop() {
   leer_datos();
 
   int velocidad_limite = calcular_media_velocidad_limite();
-  int giro = map(arr_pulseIn[PULSEIN_RAXIS_X], 0, 1000, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
+  int giro = map(arr_pulseIn[PULSEIN_RAXIS_X], 1060, 1970, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
 
   // Añade una DEADZONE de 50 a la velocidad_limite
   if (abs(1000 - velocidad_limite) < 50) {
     velocidad_limite = 1000;
   } else if (abs(1500 - velocidad_limite) < 50) {
-    velocidad_limite = 1500;
+    velocidad_limite = 1495;
   } else if (abs(2000 - velocidad_limite) < 50) {
     velocidad_limite = 2000;
   }
@@ -146,7 +147,7 @@ void loop() {
   if (abs(1000 - velocidad) < 50) {
     velocidad = 1000;
   } else if (abs(1500 - velocidad) < 50) {
-    velocidad = 1500;
+    velocidad = 1495;
   } else if (abs(2000 - velocidad) < 50) {
     velocidad = 2000;
   }
@@ -194,8 +195,11 @@ void loop() {
 }
 
 void leer_pulseIn() {
-  arr_pulseIn[PULSEIN_LAXIS_Y] = pulseIn(PIN_LAXIS_Y, HIGH) - 990;
-  arr_pulseIn[PULSEIN_RAXIS_X] = pulseIn(PIN_RAXIS_X, HIGH) - 990;
+  arr_pulseIn[PULSEIN_RAXIS_X] = pulseIn(PIN_RAXIS_X, HIGH);
+  arr_pulseIn[PULSEIN_LAXIS_Y] = pulseIn(PIN_LAXIS_Y, HIGH);
+ // Serial.print(arr_pulseIn[PULSEIN_LAXIS_Y]);
+ // Serial.print(" ");
+ // Serial.println(arr_pulseIn[PULSEIN_RAXIS_X]);
 }
 
 void leer_datos() {
@@ -220,14 +224,14 @@ void leer_datos() {
   if (millis() - millisLeerVelocidadLimite > TIEMPO_VELOCIDAD_LIMITE || lectura_inicial_velocidad_limite) {
     if (lectura_inicial_velocidad_limite) {
       for (int medida = 0; medida < NUMERO_MEDIDAS_VELOCIDAD_LIMITE; medida++) {
-        velocidad_limite[medida] = map(arr_pulseIn[PULSEIN_LAXIS_Y], 0, 1000, 1000, 2000);
+        velocidad_limite[medida] = map(arr_pulseIn[PULSEIN_LAXIS_Y], 1030, 1880, 1000, 2000);
       }
       lectura_inicial_velocidad_limite = false;
     } else {
       for (int medida = 0; medida < NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1; medida++) {
         velocidad_limite[medida] = velocidad_limite[medida + 1];
       }
-      velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1] = map(arr_pulseIn[PULSEIN_LAXIS_Y], 0, 1000, 1000, 2000);
+      velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1] = map(arr_pulseIn[PULSEIN_LAXIS_Y], 1030, 1880, 1000, 2000);
     }
     millisLeerVelocidadLimite = millis();
   }
