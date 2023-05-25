@@ -15,11 +15,11 @@
 #include <SoftwareSerial.h>
 
 // CONFIGURACIÓN
-#define SERVO_CENTRO 1160    // Barco: 1160ms  || Coche: 1625ms
-#define SERVO_AMPLITUD 275  // Barco: 275ms || Coche 300ms
+#define SERVO_CENTRO 1400  // Barco: 1160ms  || Coche: 1625ms
+#define SERVO_AMPLITUD 600 // Barco: 275ms || Coche 300ms
 #define CALIBRACION_V 2366 // 23.66v es la tensión máxima para 1023 (5v)
 #define CALIBRACION_A 25000
-bool usa_mppt = false;
+bool usa_mppt = true;
 bool usa_descartes_giros_bruscos = true;
 
 #define TENSION_ANALOG_MINIMA 0
@@ -74,7 +74,7 @@ bool lectura_inicial_velocidad_limite = true;
 int velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE];
 long millisLeerVelocidadLimite = 0;
 
-#define NUMERO_MEDIDAS_GIRO 3
+#define NUMERO_MEDIDAS_GIRO 6
 #define TIEMPO_GIRO 10
 bool lectura_inicial_giro = true;
 int giro[NUMERO_MEDIDAS_GIRO];
@@ -163,7 +163,7 @@ void loop() {
 
   motorBrushless.writeMicroseconds(velocidad);
   motorServo.writeMicroseconds(giro);
-  // return;
+   return;
 
   if (millis() - millisPrint >= 100) {
 
@@ -256,16 +256,16 @@ void leer_datos() {
       int giro_actual = map(arr_pulseIn[PULSEIN_RAXIS_X], 1060, 1970, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
 
       // Descarta cambios en el giro que sean demasiado bruscos
-      if (usa_descartes_giros_bruscos && abs(giro_actual - giro_anterior) > 50 && count_giros_descartados <= 3) {
+      if (usa_descartes_giros_bruscos && abs(giro_actual - giro_anterior) > 400 && count_giros_descartados <= 0) {
         count_giros_descartados++;
       } else {
         count_giros_descartados = 0;
-
+        //Serial.println(giro_actual);
         // Solo se añade el giro a la media si no es demasiado brusco
-        if (giro_actual < 905) {
-          giro_actual = 900;
-        } else if (giro_actual > 1400) {
-          giro_actual = 1400;
+        if (giro_actual < SERVO_CENTRO - SERVO_AMPLITUD) {
+          giro_actual = SERVO_CENTRO - SERVO_AMPLITUD;
+        } else if (giro_actual > SERVO_CENTRO + SERVO_AMPLITUD) {
+          giro_actual = SERVO_CENTRO + SERVO_AMPLITUD;
         }
         for (int medida = 0; medida < NUMERO_MEDIDAS_GIRO - 1; medida++) {
           giro[medida] = giro[medida + 1];
