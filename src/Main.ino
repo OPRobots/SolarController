@@ -297,15 +297,15 @@ int calcular_mppt(int velocidad_limite) {
 
     if (W > W_anterior) {
       if (V_media > V_anterior) {
-        velocidad_mppt -= DELTA_VELOCIDAD;
-      } else {
         velocidad_mppt += DELTA_VELOCIDAD;
+      } else {
+        velocidad_mppt -= DELTA_VELOCIDAD;
       }
     } else {
       if (V_media > V_anterior) {
-        velocidad_mppt += DELTA_VELOCIDAD;
-      } else {
         velocidad_mppt -= DELTA_VELOCIDAD;
+      } else {
+        velocidad_mppt += DELTA_VELOCIDAD;
       }
     }
     // Serial.print("\t");
