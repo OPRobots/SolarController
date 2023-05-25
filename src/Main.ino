@@ -63,6 +63,8 @@ int V_anterior = 0;
 int A[NUMERO_MEDIDAS];
 int A_media = 0;
 long millisLeerDatos = 0;
+int giro_anterior = 0;
+int count_giros_descartados = 0;
 
 #define NUMERO_MEDIDAS_VELOCIDAD_LIMITE 20
 #define TIEMPO_VELOCIDAD_LIMITE 20
@@ -126,12 +128,27 @@ void loop() {
 
   int velocidad_limite = calcular_media_velocidad_limite();
   int giro = map(arr_pulseIn[PULSEIN_RAXIS_X], 1060, 1970, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
+  // Descarta cambios en el giro que sean demasiado bruscos
+  if (giro_anterior > 0 && abs(giro - giro_anterior) > 50) {
+    count_giros_descartados++;
+    if (count_giros_descartados <= 3) {
+      giro = giro_anterior;
+    }
+  } else {
+    count_giros_descartados = 0;
+  }
+  if (giro < 905) {
+    giro = 900;
+  } else if (giro > 1400) {
+    giro = 1400;
+  }
+  giro_anterior = giro;
 
   // Añade una DEADZONE de 50 a la velocidad_limite
   if (abs(1000 - velocidad_limite) < 50) {
     velocidad_limite = 1000;
   } else if (abs(1500 - velocidad_limite) < 50) {
-    velocidad_limite = 1495;
+    velocidad_limite = 1490;
   } else if (abs(2000 - velocidad_limite) < 50) {
     velocidad_limite = 2000;
   }
@@ -147,7 +164,7 @@ void loop() {
   if (abs(1000 - velocidad) < 50) {
     velocidad = 1000;
   } else if (abs(1500 - velocidad) < 50) {
-    velocidad = 1495;
+    velocidad = 1490;
   } else if (abs(2000 - velocidad) < 50) {
     velocidad = 2000;
   }
@@ -197,9 +214,9 @@ void loop() {
 void leer_pulseIn() {
   arr_pulseIn[PULSEIN_RAXIS_X] = pulseIn(PIN_RAXIS_X, HIGH);
   arr_pulseIn[PULSEIN_LAXIS_Y] = pulseIn(PIN_LAXIS_Y, HIGH);
- // Serial.print(arr_pulseIn[PULSEIN_LAXIS_Y]);
- // Serial.print(" ");
- // Serial.println(arr_pulseIn[PULSEIN_RAXIS_X]);
+  // Serial.print(arr_pulseIn[PULSEIN_LAXIS_Y]);
+  // Serial.print(" ");
+  // Serial.println(arr_pulseIn[PULSEIN_RAXIS_X]);
 }
 
 void leer_datos() {
