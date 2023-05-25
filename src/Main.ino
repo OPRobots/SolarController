@@ -15,10 +15,12 @@
 #include <SoftwareSerial.h>
 
 // CONFIGURACIÓN
-#define SERVO_CENTRO 90  // Barco: 1160ms  || Coche: 1625ms
-#define SERVO_AMPLITUD 60 // Barco: 275ms || Coche 300ms
+#define SERVO_CENTRO 90    // Barco: 1160ms  || Coche: 1625ms
+#define SERVO_AMPLITUD 60  // Barco: 275ms || Coche 300ms
 #define CALIBRACION_V 2366 // 23.66v es la tensión máxima para 1023 (5v)
 #define CALIBRACION_A 25000
+bool usa_mppt = false;
+bool usa_descartes_giros_bruscos = true;
 
 #define TENSION_ANALOG_MINIMA 0
 #define TENSION_ANALOG_MAXIMA 932
@@ -67,10 +69,16 @@ int giro_anterior = 0;
 int count_giros_descartados = 0;
 
 #define NUMERO_MEDIDAS_VELOCIDAD_LIMITE 20
-#define TIEMPO_VELOCIDAD_LIMITE 20
+#define TIEMPO_VELOCIDAD_LIMITE 10
 bool lectura_inicial_velocidad_limite = true;
 int velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE];
 long millisLeerVelocidadLimite = 0;
+
+#define NUMERO_MEDIDAS_GIRO 3
+#define TIEMPO_GIRO 10
+bool lectura_inicial_giro = true;
+int giro[NUMERO_MEDIDAS_GIRO];
+long millisLeerGiro = 0;
 
 // VARIABLES PULSEIN
 #define PULSEIN_LAXIS_Y 0
@@ -79,7 +87,6 @@ int arr_pulseIn[2];
 
 // VARIABLES MPPT
 #define DELTA_VELOCIDAD 30
-bool usa_mppt = false;
 float W = 0;
 float W_anterior = 0;
 int velocidad = 0;
@@ -127,25 +134,7 @@ void loop() {
   leer_datos();
 
   int velocidad_limite = calcular_media_velocidad_limite();
-  // int giro = map(arr_pulseIn[PULSEIN_RAXIS_X], 1060, 1970, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
-  int giro = map(arr_pulseIn[PULSEIN_RAXIS_X], 1060, 1970, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
-  
-  // // Descarta cambios en el giro que sean demasiado bruscos
-  // if (giro_anterior > 0 && abs(giro - giro_anterior) > 50) {
-  //   count_giros_descartados++;
-  //   if (count_giros_descartados <= 3) {
-  //     giro = giro_anterior;
-  //   }
-  // } else {
-  //   count_giros_descartados = 0;
-  // }
-  // if (giro < 905) {
-  //   giro = 900;
-  // } else if (giro > 1400) {
-  //   giro = 1400;
-  // }
-  // giro_anterior = giro;
-
+  int giro = calcular_media_giro();
 
   // Añade una DEADZONE de 50 a la velocidad_limite
   if (abs(1000 - velocidad_limite) < 50) {
@@ -173,7 +162,7 @@ void loop() {
   }
 
   motorBrushless.writeMicroseconds(velocidad);
-  motorServo.write(giro);
+  motorServo.writeMicroseconds(giro);
   // return;
 
   if (millis() - millisPrint >= 100) {
@@ -241,7 +230,7 @@ void leer_datos() {
     millisLeerDatos = millis();
   }
 
-  if (millis() - millisLeerVelocidadLimite > TIEMPO_VELOCIDAD_LIMITE || lectura_inicial_velocidad_limite) {
+  if (millis() - millisLeerVelocidadLimite >= TIEMPO_VELOCIDAD_LIMITE || lectura_inicial_velocidad_limite) {
     if (lectura_inicial_velocidad_limite) {
       for (int medida = 0; medida < NUMERO_MEDIDAS_VELOCIDAD_LIMITE; medida++) {
         velocidad_limite[medida] = map(arr_pulseIn[PULSEIN_LAXIS_Y], 1030, 1880, 1000, 2000);
@@ -254,6 +243,38 @@ void leer_datos() {
       velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1] = map(arr_pulseIn[PULSEIN_LAXIS_Y], 1030, 1880, 1000, 2000);
     }
     millisLeerVelocidadLimite = millis();
+  }
+
+  if (millis() - millisLeerGiro >= TIEMPO_GIRO || lectura_inicial_giro) {
+    if (lectura_inicial_giro) {
+      for (int medida = 0; medida < NUMERO_MEDIDAS_GIRO; medida++) {
+        giro[medida] = map(arr_pulseIn[PULSEIN_RAXIS_X], 1060, 1970, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
+        giro_anterior = giro[medida];
+      }
+      lectura_inicial_giro = false;
+    } else {
+      int giro_actual = map(arr_pulseIn[PULSEIN_RAXIS_X], 1060, 1970, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
+
+      // Descarta cambios en el giro que sean demasiado bruscos
+      if (usa_descartes_giros_bruscos && abs(giro_actual - giro_anterior) > 50 && count_giros_descartados <= 3) {
+        count_giros_descartados++;
+      } else {
+        count_giros_descartados = 0;
+
+        // Solo se añade el giro a la media si no es demasiado brusco
+        if (giro_actual < 905) {
+          giro_actual = 900;
+        } else if (giro_actual > 1400) {
+          giro_actual = 1400;
+        }
+        for (int medida = 0; medida < NUMERO_MEDIDAS_GIRO - 1; medida++) {
+          giro[medida] = giro[medida + 1];
+        }
+        giro[NUMERO_MEDIDAS_GIRO - 1] = giro_actual;
+        giro_anterior = giro_actual;
+      }
+    }
+    millisLeerGiro = millis();
   }
 }
 
@@ -339,6 +360,14 @@ int calcular_media_velocidad_limite() {
     suma_velocidad_limite += velocidad_limite[medida];
   }
   return suma_velocidad_limite / NUMERO_MEDIDAS_VELOCIDAD_LIMITE;
+}
+
+int calcular_media_giro() {
+  long suma_giro = 0;
+  for (int medida = 0; medida < NUMERO_MEDIDAS_GIRO; medida++) {
+    suma_giro += giro[medida];
+  }
+  return suma_giro / NUMERO_MEDIDAS_GIRO;
 }
 
 // void encoder_a() { ticks_encoder_a++; }
