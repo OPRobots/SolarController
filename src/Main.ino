@@ -15,8 +15,8 @@
 #include <SoftwareSerial.h>
 
 // CONFIGURACIÓN
-#define SERVO_CENTRO 90    // Barco: 1160ms  || Coche: 1625ms
-#define SERVO_AMPLITUD 60  // Barco: 275ms || Coche 300ms
+#define SERVO_CENTRO 1160    // Barco: 1160ms  || Coche: 1625ms
+#define SERVO_AMPLITUD 275  // Barco: 275ms || Coche 300ms
 #define CALIBRACION_V 2366 // 23.66v es la tensión máxima para 1023 (5v)
 #define CALIBRACION_A 25000
 bool usa_mppt = false;
