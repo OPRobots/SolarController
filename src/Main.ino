@@ -15,8 +15,8 @@
 #include <SoftwareSerial.h>
 
 // CONFIGURACIÓN
-#define SERVO_CENTRO 1160  // Barco: 1160  || Coche: 1625
-#define SERVO_AMPLITUD 275 // Barco: 275 || Coche 300
+#define SERVO_CENTRO 90  // Barco: 1160ms  || Coche: 1625ms
+#define SERVO_AMPLITUD 60 // Barco: 275ms || Coche 300ms
 #define CALIBRACION_V 2366 // 23.66v es la tensión máxima para 1023 (5v)
 #define CALIBRACION_A 25000
 
@@ -127,22 +127,25 @@ void loop() {
   leer_datos();
 
   int velocidad_limite = calcular_media_velocidad_limite();
+  // int giro = map(arr_pulseIn[PULSEIN_RAXIS_X], 1060, 1970, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
   int giro = map(arr_pulseIn[PULSEIN_RAXIS_X], 1060, 1970, SERVO_CENTRO - SERVO_AMPLITUD, SERVO_CENTRO + SERVO_AMPLITUD);
-  // Descarta cambios en el giro que sean demasiado bruscos
-  if (giro_anterior > 0 && abs(giro - giro_anterior) > 50) {
-    count_giros_descartados++;
-    if (count_giros_descartados <= 3) {
-      giro = giro_anterior;
-    }
-  } else {
-    count_giros_descartados = 0;
-  }
-  if (giro < 905) {
-    giro = 900;
-  } else if (giro > 1400) {
-    giro = 1400;
-  }
-  giro_anterior = giro;
+  
+  // // Descarta cambios en el giro que sean demasiado bruscos
+  // if (giro_anterior > 0 && abs(giro - giro_anterior) > 50) {
+  //   count_giros_descartados++;
+  //   if (count_giros_descartados <= 3) {
+  //     giro = giro_anterior;
+  //   }
+  // } else {
+  //   count_giros_descartados = 0;
+  // }
+  // if (giro < 905) {
+  //   giro = 900;
+  // } else if (giro > 1400) {
+  //   giro = 1400;
+  // }
+  // giro_anterior = giro;
+
 
   // Añade una DEADZONE de 50 a la velocidad_limite
   if (abs(1000 - velocidad_limite) < 50) {
@@ -170,7 +173,7 @@ void loop() {
   }
 
   motorBrushless.writeMicroseconds(velocidad);
-  motorServo.writeMicroseconds(giro);
+  motorServo.write(giro);
   // return;
 
   if (millis() - millisPrint >= 100) {
