@@ -18,8 +18,8 @@
 #define SERVO_CENTRO 1400  // Barco: 1160ms  || Coche: 1625ms
 #define SERVO_AMPLITUD 600 // Barco: 275ms || Coche 300ms
 #define CALIBRACION_V 2366 // 23.66v es la tensión máxima para 1023 (5v)
-#define CALIBRACION_A 25000
-bool usa_mppt = true;
+#define CALIBRACION_A 14000
+bool usa_mppt = false;
 bool usa_descartes_giros_bruscos = true;
 bool usa_descartes_velocidades_bruscos = true;
 
@@ -166,7 +166,7 @@ void loop() {
 
   motorBrushless.writeMicroseconds(velocidad);
   motorServo.writeMicroseconds(giro);
-  return;
+  //return;
 
   if (millis() - millisPrint >= 100) {
 
@@ -243,7 +243,7 @@ void leer_datos() {
       int vel_actual = map(arr_pulseIn[PULSEIN_LAXIS_Y], 1030, 1880, 1000, 2000);
 
       // Descarta cambios en la velocidad que sean demasiado bruscos
-      if (usa_descartes_velocidades_bruscos && abs(vel_actual - vel_anterior) > 400 && count_velocidades_descartados <= 0) {
+      if (usa_descartes_velocidades_bruscos && abs(vel_actual - vel_anterior) > 200 && count_velocidades_descartados <= 0) {
         count_velocidades_descartados++;
       } else {
         count_velocidades_descartados = 0;
