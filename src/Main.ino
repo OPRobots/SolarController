@@ -21,6 +21,7 @@
 #define CALIBRACION_A 25000
 bool usa_mppt = true;
 bool usa_descartes_giros_bruscos = true;
+bool usa_descartes_velocidades_bruscos = true;
 
 #define TENSION_ANALOG_MINIMA 0
 #define TENSION_ANALOG_MAXIMA 932
@@ -65,7 +66,9 @@ int V_anterior = 0;
 int A[NUMERO_MEDIDAS];
 int A_media = 0;
 long millisLeerDatos = 0;
+int vel_anterior = 0;
 int giro_anterior = 0;
+int count_velocidades_descartados = 0;
 int count_giros_descartados = 0;
 
 #define NUMERO_MEDIDAS_VELOCIDAD_LIMITE 20
@@ -163,7 +166,7 @@ void loop() {
 
   motorBrushless.writeMicroseconds(velocidad);
   motorServo.writeMicroseconds(giro);
-   return;
+  return;
 
   if (millis() - millisPrint >= 100) {
 
@@ -237,10 +240,19 @@ void leer_datos() {
       }
       lectura_inicial_velocidad_limite = false;
     } else {
-      for (int medida = 0; medida < NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1; medida++) {
-        velocidad_limite[medida] = velocidad_limite[medida + 1];
+      int vel_actual = map(arr_pulseIn[PULSEIN_LAXIS_Y], 1030, 1880, 1000, 2000);
+
+      // Descarta cambios en la velocidad que sean demasiado bruscos
+      if (usa_descartes_velocidades_bruscos && abs(vel_actual - vel_anterior) > 400 && count_velocidades_descartados <= 0) {
+        count_velocidades_descartados++;
+      } else {
+        count_velocidades_descartados = 0;
+
+        for (int medida = 0; medida < NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1; medida++) {
+          velocidad_limite[medida] = velocidad_limite[medida + 1];
+        }
+        velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1] = vel_actual;
       }
-      velocidad_limite[NUMERO_MEDIDAS_VELOCIDAD_LIMITE - 1] = map(arr_pulseIn[PULSEIN_LAXIS_Y], 1030, 1880, 1000, 2000);
     }
     millisLeerVelocidadLimite = millis();
   }
@@ -260,8 +272,8 @@ void leer_datos() {
         count_giros_descartados++;
       } else {
         count_giros_descartados = 0;
-        //Serial.println(giro_actual);
-        // Solo se añade el giro a la media si no es demasiado brusco
+        // Serial.println(giro_actual);
+        //  Solo se añade el giro a la media si no es demasiado brusco
         if (giro_actual < SERVO_CENTRO - SERVO_AMPLITUD) {
           giro_actual = SERVO_CENTRO - SERVO_AMPLITUD;
         } else if (giro_actual > SERVO_CENTRO + SERVO_AMPLITUD) {
