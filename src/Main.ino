@@ -56,8 +56,7 @@ volatile unsigned long ticks_encoder_a = 0;
 volatile unsigned long ticks_encoder_b = 0;
 
 // VARIABLES DATOS
-#define NUMERO_MEDIDAS 30
-#define TIEMPO_MPPT 125
+#define NUMERO_MEDIDAS 50
 int medida_actual = 0;
 bool lectura_inicial = true;
 int V[NUMERO_MEDIDAS];
@@ -89,7 +88,8 @@ long millisLeerGiro = 0;
 int arr_pulseIn[2];
 
 // VARIABLES MPPT
-#define DELTA_VELOCIDAD 30
+#define TIEMPO_MPPT 120
+#define DELTA_VELOCIDAD 20
 float W = 0;
 float W_anterior = 0;
 int velocidad = 0;
@@ -166,19 +166,21 @@ void loop() {
 
   motorBrushless.writeMicroseconds(velocidad);
   motorServo.writeMicroseconds(giro);
-  //return;
+  
+    //Serial.println(calcular_media_A());
+  return;
 
   if (millis() - millisPrint >= 100) {
 
     Serial.print(" V: ");
-    Serial.print(leer_tension());
-    Serial.print("\t - \t");
+    //Serial.print(leer_tension());
+    //Serial.print("\t - \t");
     //   // Serial.print(analogRead(PIN_VOLTIMETRO));
     //   // Serial.print(" - ");
     Serial.print(calcular_media_V());
     Serial.print("\t A: ");
-    Serial.print(leer_consumo());
-    Serial.print("\t - \t");
+    //Serial.print(leer_consumo());
+    //Serial.print("\t - \t");
     //   // Serial.print(analogRead(PIN_AMPERIMETRO));
     //   // Serial.print(" - ");
     //   // Serial.print(0);
@@ -308,15 +310,21 @@ int calcular_mppt(int velocidad_limite) {
     // return velocidad_limite;
 
     if (W > W_anterior) {
-      if (V_media > V_anterior) {
+      Serial.print("+W | ");
+      if (V_media < V_anterior) {
+        Serial.println("v+");
         velocidad_mppt += DELTA_VELOCIDAD;
       } else {
+        Serial.println("v-");
         velocidad_mppt -= DELTA_VELOCIDAD;
       }
     } else {
-      if (V_media > V_anterior) {
+      Serial.print("-W | ");
+      if (V_media < V_anterior) {
+        Serial.println("v-");
         velocidad_mppt -= DELTA_VELOCIDAD;
       } else {
+        Serial.println("v+");
         velocidad_mppt += DELTA_VELOCIDAD;
       }
     }
